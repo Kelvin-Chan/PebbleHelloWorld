@@ -1,0 +1,26 @@
+{
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "kelvin.chan95hk@gmail.com",
+    "longName": "Hello World",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "images/globe.png",
+                "name": "GLOBE",
+                "type": "png"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "Hello World",
+    "uuid": "7b159a4d-228b-4702-b083-953e2e755cb3",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
+}
