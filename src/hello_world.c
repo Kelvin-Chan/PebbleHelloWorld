@@ -5,6 +5,31 @@ TextLayer *text_layer;
 static GBitmap *s_bitmap;
 static BitmapLayer *s_bitmap_layer;
 
+// Prototyping User-Defined Function
+void pushText(void);
+void pushImage(void);
+void switchScreen(void);
+
+// ----------------  Click Handler Functions and Provider  ----------------------
+static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
+  switchScreen();
+}
+
+static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
+  switchScreen();
+}
+
+static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
+  switchScreen();
+}
+
+static void click_config_provider(void *context) {
+  // Register the ClickHandlers
+  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
+  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
+}
+// -------------------------------------------------------------------------
 
 void pushText(void){
   // Create a window and text layer
@@ -18,6 +43,9 @@ void pushText(void){
   
   // Add the text layer to the window
 	layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_layer));
+  
+  // Set Click Config Provider to Window
+  window_set_click_config_provider(window, click_config_provider);
   
   // Push the window
   window_stack_push(window, true);
@@ -41,6 +69,9 @@ void pushImage(void){
   // Add BitmapLayer to window2
   layer_add_child(window_get_root_layer(window2), bitmap_layer_get_layer(s_bitmap_layer));
   
+  // Set Click Config Provider to Window
+  window_set_click_config_provider(window2, click_config_provider); 
+  
   // Push window2
   window_stack_push(window2, true);
   
@@ -53,6 +84,13 @@ void switchScreen(void){
     pushImage();
   }else{
   window_stack_pop(true);
+  
+  // Destroy Bitmap layer
+  gbitmap_destroy(s_bitmap);
+  bitmap_layer_destroy(s_bitmap_layer);
+	
+	// Destroy the window
+  window_destroy(window2);
   }
 }
 
@@ -72,27 +110,6 @@ void handle_deinit(void) {
 	window_destroy(window);
   window_destroy(window2);
 }
-
-// ----------------  Click Handler Functions and Provider  ----------------------
-static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  text_layer_set_text(text_layer, "UP");
-}
-
-static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  text_layer_set_text(text_layer, "SELECT");
-}
-
-static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  text_layer_set_text(text_layer, "DOWN");
-}
-
-static void click_config_provider(void *context) {
-  // Register the ClickHandlers
-  window_single_click_subscribe(BUTTON_ID_UP, up_click_handler);
-  window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
-  window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
-}
-// -------------------------------------------------------------------------
 
 int main(void) {
 	handle_init();
