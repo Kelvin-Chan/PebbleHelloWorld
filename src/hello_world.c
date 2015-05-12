@@ -1,29 +1,39 @@
-#include <pebble.h>
+#include <pebble.h>  
 
-Window *window, *window2, *window3;
-TextLayer *text_layer;
+// ****** THIS APP WILL SWITCH BETWEEN WINDOWS, PUSHING A NEW WINDOW IN BEFORE POPPING THE PREVIOUS ONE ******
+  
+static int numOfWindows = 3;  // change number of windows if expanding window array
+  
+Window *window[3];    // window pointer array
+int windowIndex = 0;  // global window array index to keep track of what is on top of stack; default is 0
+
+// Declare layers and layer elements to be used in different windows
+TextLayer *text_layer, *index_layer;
 static GBitmap *globe_bitmap, *logo_bitmap;
 static BitmapLayer *globe_bitmap_layer, *logo_bitmap_layer;
 
+
 // Prototyping User-Defined Function
-void pushText(void);
-void pushImage(void);
-void switchUp(void);
-void switchHome(void);
-void switchDown(void);
-void cleanUp(GBitmap *bitmap, BitmapLayer *bitmaplayer);
+void createWindow(int index);
+void destroyWindow(int index);
+void pushWindow(int index);
+void popWindow(int index);
+void pressUp(void);
+void pressHome(void);
+void pressDown(void);
+void cleanUpImage(GBitmap *bitmap, BitmapLayer *bitmaplayer);
 
 // ----------------  Click Handler Functions and Provider  ----------------------
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  switchUp();
+  pressUp();
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  switchHome();
+  pressHome();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  switchDown();
+  pressDown();
 }
 
 static void click_config_provider(void *context) {
@@ -32,130 +42,132 @@ static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, down_click_handler);
 }
-// -------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 
-void pushText(void){
-  // Create a window and text layer
-	window = window_create();
-	text_layer = text_layer_create(GRect(0, 0, 144, 154));
+// ------------------------- Window Operations ----------------------------------
+void createWindow(int index){
+  // Create window with corresponding index
+  window[index] = window_create();
   
-  // Set the text, font, and text alignment
-	text_layer_set_text(text_layer, "Hi, I'm a Pebble! Press Any Button For Globe!");
-	text_layer_set_font(text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
-	text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
-  
-  // Add the text layer to the window
-	layer_add_child(window_get_root_layer(window), text_layer_get_layer(text_layer));
-  
-  // Set Click Config Provider to Window
-  window_set_click_config_provider(window, click_config_provider);
-  
-  // Push the window
-  window_stack_push(window, true);
-  
-  // App Logging!
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed Window!");
-}
-
-void pushImage(void){
-  
-  // Create Bitmap Window
-  window2 = window_create();
-	
-  // Assign Gbitmap pointer
-  globe_bitmap = gbitmap_create_with_resource(RESOURCE_ID_GLOBE);
-  
-  // Assign BitmapLayer pointer
-  globe_bitmap_layer = bitmap_layer_create(GRect(0, 0, 144, 144));
-  bitmap_layer_set_bitmap(globe_bitmap_layer, globe_bitmap);
-  
-  // Add BitmapLayer to window2
-  layer_add_child(window_get_root_layer(window2), bitmap_layer_get_layer(globe_bitmap_layer));
-  
-  // Set Click Config Provider to Window
-  window_set_click_config_provider(window2, click_config_provider); 
-  
-  // Push window2
-  window_stack_push(window2, true);
-  
-  // App Logging!
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed Window2!");
-}
-
-void pushLogo(void){
-  
-  // Create Bitmap Window
-  window3 = window_create();
-	
-  // Assign Gbitmap pointer
-  logo_bitmap = gbitmap_create_with_resource(RESOURCE_ID_CHERRY_PICKS);
-  
-  // Assign BitmapLayer pointer
-  logo_bitmap_layer = bitmap_layer_create(GRect(0, 58, 144, 86));
-  bitmap_layer_set_bitmap(logo_bitmap_layer, logo_bitmap);
-  
-  // Add BitmapLayer to window2
-  layer_add_child(window_get_root_layer(window3), bitmap_layer_get_layer(logo_bitmap_layer));
-  
-  // Set Click Config Provider to Window
-  window_set_click_config_provider(window3, click_config_provider); 
-  
-  // Push window2
-  window_stack_push(window3, true);
-  
-  // App Logging!
-	APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed Window2!");
-}
-
-void switchUp(void){
-  if(!window_stack_contains_window(window2)){
-    pushImage();
-  }else if(!window_stack_contains_window(window3)){
-    pushLogo();
-  }else{
-    window_stack_pop(true);
-    cleanUp(logo_bitmap, logo_bitmap_layer);
+  switch(index){
+    case 0:
+      // Set the text layer, text, font, and text alignment
+      text_layer = text_layer_create(GRect(0, 0, 144, 154));
+      text_layer_set_text(text_layer, "Hi, I'm a Pebble! Press Up or Down to Scroll Through Windows!");
+	    text_layer_set_font(text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD));
+	    text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
+      // Add text layer to window[0]
+      layer_add_child(window_get_root_layer(window[0]), text_layer_get_layer(text_layer));
+      break;
+    
+    case 1:
+      // Set Gbitmap, BitmapLayer pointer
+      globe_bitmap = gbitmap_create_with_resource(RESOURCE_ID_GLOBE);
+      globe_bitmap_layer = bitmap_layer_create(GRect(0, 0, 144, 144));
+      bitmap_layer_set_bitmap(globe_bitmap_layer, globe_bitmap);
+      // Add BitmapLayer to window[1]
+      layer_add_child(window_get_root_layer(window[1]), bitmap_layer_get_layer(globe_bitmap_layer));
+      break;
+    
+    case 2:
+      // Set Gbitmap, BitmapLayer pointer
+      logo_bitmap = gbitmap_create_with_resource(RESOURCE_ID_CHERRY_PICKS);
+      logo_bitmap_layer = bitmap_layer_create(GRect(0, 58, 144, 86));
+      bitmap_layer_set_bitmap(logo_bitmap_layer, logo_bitmap);
+      // Add BitmapLayer to window[2]
+      layer_add_child(window_get_root_layer(window[2]), bitmap_layer_get_layer(logo_bitmap_layer));
+      break;
   }
 }
 
-void switchHome(void){
-  while(window_stack_get_top_window() != window){
-    Window *windowTemp = window_stack_pop(true);
-    if(windowTemp == window3){
-      cleanUp(logo_bitmap, logo_bitmap_layer);
-    }else{
-      cleanUp(globe_bitmap, globe_bitmap_layer);
-    }
+void destroyWindow(int index){
+  // Clean up data from indexed Window and its layer & elements
+  window_destroy(window[index]);
+  switch(index){
+    case 0:
+      text_layer_destroy(text_layer);
+      break;
+    case 1:
+      cleanUpImage(logo_bitmap, logo_bitmap_layer);
+      break;
+    case 2:
+      cleanUpImage(logo_bitmap, logo_bitmap_layer);
+      break;
   }
 }
 
-void switchDown(void){
-  if(window_stack_get_top_window() != window){
-    Window *windowTemp = window_stack_pop(true);
-    if(windowTemp == window3){
-      cleanUp(logo_bitmap, logo_bitmap_layer);
-    }else{
-      cleanUp(globe_bitmap, globe_bitmap_layer);
-    }
-  }
+void pushWindow(int index){
+  // Set Click Config Provider to indexed Window
+  window_set_click_config_provider(window[index], click_config_provider); 
+  // Push indexed Window
+  window_stack_push(window[index], true);
+  // App Logging!
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed window!" );
 }
 
-void cleanUp(GBitmap *bitmap, BitmapLayer *bitmap_layer){
+void popWindow(int index){
+  // Remove specific indexed Window from stack
+  window_stack_remove(window[index], true);
+}
+
+void cleanUpImage(GBitmap *bitmap, BitmapLayer *bitmap_layer){
     // Destroy Bitmap and Bitmap layer
     gbitmap_destroy(bitmap);
     bitmap_layer_destroy(bitmap_layer);
 }
-  
+// -----------------------------------------------------------------------------
+
+// -------------------------- Key Press Operations -----------------------------
+void pressUp(void){
+  // Go to next Window if not at last Window, otherwise return to first Window
+  if(windowIndex != numOfWindows - 1){
+    windowIndex++;
+    pushWindow(windowIndex);
+    popWindow(windowIndex - 1);  // Make sure at least one Window is in stack to keep app running
+  }else{
+    pushWindow(0);
+    popWindow(windowIndex);
+    windowIndex = 0;
+  }
+}
+
+void pressHome(void){
+  // Go to first Window, if not already
+  if(windowIndex != 0){
+    pushWindow(0);
+    popWindow(windowIndex);
+    windowIndex = 0;
+  }
+}
+
+void pressDown(void){
+  // Go to previous Window if not at first Window, otherwise go to last Window
+  if(windowIndex != 0){
+    pushWindow(windowIndex - 1);
+    popWindow(windowIndex);
+    windowIndex--;
+  }else{
+    pushWindow(numOfWindows - 1);
+    popWindow(0);
+    windowIndex = numOfWindows - 1;
+  }
+}
+// -----------------------------------------------------------------------
+
+// -------------- Main Application Operations (DO NOT REMOVE) ------------
 void handle_init(void){
-	pushText();
+	// create all windows & elements in background
+  for(int c = 0; c < numOfWindows; c++){
+    createWindow(c);
+  }
+  pushWindow(windowIndex);
 }
 
 void handle_deinit(void){
-	// Destroy the text layer
-	text_layer_destroy(text_layer);
-	
-	// Destroy the window
-	window_destroy(window);
+	// destrory all windows & elements in background
+	for(int c = 0; c < numOfWindows; c++){
+    destroyWindow(c);
+  }
 }
 
 int main(void){
@@ -163,3 +175,4 @@ int main(void){
 	app_event_loop();
 	handle_deinit();
 }
+// -----------------------------------------------------------------------
