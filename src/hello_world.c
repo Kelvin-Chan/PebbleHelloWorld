@@ -1,26 +1,29 @@
 #include <pebble.h>
 
-Window *window, *window2;
+Window *window, *window2, *window3;
 TextLayer *text_layer;
-static GBitmap *s_bitmap;
-static BitmapLayer *s_bitmap_layer;
+static GBitmap *globe_bitmap, *logo_bitmap;
+static BitmapLayer *globe_bitmap_layer, *logo_bitmap_layer;
 
 // Prototyping User-Defined Function
 void pushText(void);
 void pushImage(void);
-void switchScreen(void);
+void switchUp(void);
+void switchHome(void);
+void switchDown(void);
+void cleanUp(GBitmap *bitmap, BitmapLayer *bitmaplayer);
 
 // ----------------  Click Handler Functions and Provider  ----------------------
 static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
-  switchScreen();
+  switchUp();
 }
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  switchScreen();
+  switchHome();
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
-  switchScreen();
+  switchDown();
 }
 
 static void click_config_provider(void *context) {
@@ -60,14 +63,14 @@ void pushImage(void){
   window2 = window_create();
 	
   // Assign Gbitmap pointer
-  s_bitmap = gbitmap_create_with_resource(RESOURCE_ID_GLOBE);
+  globe_bitmap = gbitmap_create_with_resource(RESOURCE_ID_GLOBE);
   
   // Assign BitmapLayer pointer
-  s_bitmap_layer = bitmap_layer_create(GRect(0, 0, 144, 144));
-  bitmap_layer_set_bitmap(s_bitmap_layer, s_bitmap);
+  globe_bitmap_layer = bitmap_layer_create(GRect(0, 0, 144, 144));
+  bitmap_layer_set_bitmap(globe_bitmap_layer, globe_bitmap);
   
   // Add BitmapLayer to window2
-  layer_add_child(window_get_root_layer(window2), bitmap_layer_get_layer(s_bitmap_layer));
+  layer_add_child(window_get_root_layer(window2), bitmap_layer_get_layer(globe_bitmap_layer));
   
   // Set Click Config Provider to Window
   window_set_click_config_provider(window2, click_config_provider); 
@@ -79,39 +82,83 @@ void pushImage(void){
 	APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed Window2!");
 }
 
-void switchScreen(void){
+void pushLogo(void){
+  
+  // Create Bitmap Window
+  window3 = window_create();
+	
+  // Assign Gbitmap pointer
+  logo_bitmap = gbitmap_create_with_resource(RESOURCE_ID_CHERRY_PICKS);
+  
+  // Assign BitmapLayer pointer
+  logo_bitmap_layer = bitmap_layer_create(GRect(0, 58, 144, 86));
+  bitmap_layer_set_bitmap(logo_bitmap_layer, logo_bitmap);
+  
+  // Add BitmapLayer to window2
+  layer_add_child(window_get_root_layer(window3), bitmap_layer_get_layer(logo_bitmap_layer));
+  
+  // Set Click Config Provider to Window
+  window_set_click_config_provider(window3, click_config_provider); 
+  
+  // Push window2
+  window_stack_push(window3, true);
+  
+  // App Logging!
+	APP_LOG(APP_LOG_LEVEL_DEBUG, "Just pushed Window2!");
+}
+
+void switchUp(void){
   if(!window_stack_contains_window(window2)){
     pushImage();
+  }else if(!window_stack_contains_window(window3)){
+    pushLogo();
   }else{
-  window_stack_pop(true);
-  
-  // Destroy Bitmap layer
-  gbitmap_destroy(s_bitmap);
-  bitmap_layer_destroy(s_bitmap_layer);
-	
-	// Destroy the window
-  window_destroy(window2);
+    window_stack_pop(true);
+    cleanUp(logo_bitmap, logo_bitmap_layer);
   }
 }
 
-void handle_init(void) {
+void switchHome(void){
+  while(window_stack_get_top_window() != window){
+    Window *windowTemp = window_stack_pop(true);
+    if(windowTemp == window3){
+      cleanUp(logo_bitmap, logo_bitmap_layer);
+    }else{
+      cleanUp(globe_bitmap, globe_bitmap_layer);
+    }
+  }
+}
+
+void switchDown(void){
+  if(window_stack_get_top_window() != window){
+    Window *windowTemp = window_stack_pop(true);
+    if(windowTemp == window3){
+      cleanUp(logo_bitmap, logo_bitmap_layer);
+    }else{
+      cleanUp(globe_bitmap, globe_bitmap_layer);
+    }
+  }
+}
+
+void cleanUp(GBitmap *bitmap, BitmapLayer *bitmap_layer){
+    // Destroy Bitmap and Bitmap layer
+    gbitmap_destroy(bitmap);
+    bitmap_layer_destroy(bitmap_layer);
+}
+  
+void handle_init(void){
 	pushText();
 }
 
-void handle_deinit(void) {
+void handle_deinit(void){
 	// Destroy the text layer
 	text_layer_destroy(text_layer);
-  
-  // Destroy Bitmap layer
-  gbitmap_destroy(s_bitmap);
-  bitmap_layer_destroy(s_bitmap_layer);
 	
 	// Destroy the window
 	window_destroy(window);
-  window_destroy(window2);
 }
 
-int main(void) {
+int main(void){
 	handle_init();
 	app_event_loop();
 	handle_deinit();
